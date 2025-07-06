@@ -338,7 +338,7 @@
         </div>
 
         <!-- Temporary version indicator for debugging -->
-        <div id="version-indicator" class="text-xs text-gray-400 text-right mt-4">Version: 2.2</div>
+        <div id="version-indicator" class="text-xs text-gray-400 text-right mt-4">Version: 2.3</div>
 
     </div>
 
@@ -367,7 +367,7 @@
           apiKey: "AIzaSyBbB5KX4cu5Bm8ErY2guMpslCQIt4Q8JBc",
           authDomain: "spaced-repetition-app-22ab6.firebaseapp.com",
           projectId: "spaced-repetition-app-22ab6",
-          storageBucket: "spaced-repetition-app-22ab6.firebasestorage.app",
+          storageBucket: "spaced-repetition-app-22ab6.firebaseapp.com",
           messagingSenderId: "835061753065",
           appId: "1:835061753065:web:5e2840c687bbfa040c3c78",
           measurementId: "G-L1MX5PHLQ1"
@@ -1664,7 +1664,7 @@
         // --- Main Application Initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
             // Log the script version for debugging purposes
-            console.log("Script Version: 2.2 - Thai Speech & Mobile Enhancements"); // NEW IN 2.2
+            console.log("Script Version: 2.3 - Fixed DOCTYPE display"); // NEW IN 2.3
             const versionIndicator = document.getElementById('version-indicator');
             if (versionIndicator) {
                 versionIndicator.classList.remove('hidden'); // Make the version visible for debugging
