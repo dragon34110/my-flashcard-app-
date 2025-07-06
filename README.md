@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaced Repetition Tutor - Language Practice</title>
+    <!-- Tailwind CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Sarabun Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1.5rem; /* Adjusted for better mobile padding */
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            transition: background-color 0.3s ease;
+            cursor: pointer; /* Ensure button cursor is active */
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+            border: none;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+            border: none;
+        }
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .btn-info {
+            background-color: #3b82f6; /* Blue */
+            color: white;
+            border: none;
+        }
+        .btn-info:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box; /* Ensures padding doesn't affect total width */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #eff6ff;
+        }
+        /* IMPORTANT FIX: Ensure hidden class overrides all display properties */
+        .hidden {
+            display: none !important; /* Added !important to force hide */
+        }
+        .flash-message {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 700;
+            text-align: center;
+        }
+        .flash-success { background-color: #10b981; }
+        .flash-error { background-color: #ef4444; }
+        .flash-info { background-color: #3b82f6; }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; /* Default display when not hidden */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            font-size: 1.5rem;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Small spinner for buttons */
+        .spinner-small {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid #fff;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p>กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <div class="container bg-white p-8 rounded-lg shadow-xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
+            Spaced Repetition Tutor
+        </h1>
+        <p class="text-center text-gray-600 mb-8">
+            ฝึกภาษาด้วยระบบทบทวนแบบเว้นระยะพร้อมเสียงอ่าน
+        </p>
+        <p id="user-id-display" class="text-center text-sm text-gray-500 mb-4">
+            User ID: โหลดอยู่...
+        </p>
+
+        <div id="flash-message-container" class="mb-4"></div>
+
+        <div id="main-menu" class="text-center space-y-4">
+            <button id="start-learning-btn" class="btn btn-primary w-full">🚀 เริ่มเรียนรู้</button>
+            <button id="manage-questions-btn" class="btn btn-secondary w-full" data-initial-text="📚 จัดการคำถาม" data-button-version="1.9">📚 จัดการคำถาม</button>
+            <button id="view-stats-btn" class="btn btn-secondary w-full">📊 ดูสถิติ</button>
+            <button id="export-import-btn" class="btn btn-secondary w-full">📁 ส่งออก/นำเข้าข้อมูล</button>
+            <button id="exit-app-btn" class="btn btn-danger w-full">👋 ออกจากแอป</button>
+        </div>
+
+        <div id="learning-session-screen" class="hidden">
+            <h2 class="text-2xl font-bold mb-4 text-center">🎯 เซสชั่นการเรียนรู้</h2>
+            <div id="learning-status" class="text-center mb-4 text-gray-700"></div>
+
+            <div id="question-display" class="border p-6 rounded-lg bg-blue-50 mb-6">
+                <p class="text-xl font-semibold mb-2">คำถาม (ID: <span id="question-id"></span>):</p>
+                <p id="current-question" class="text-2xl font-bold text-blue-800"></p>
+                <button id="speak-question-btn" class="btn btn-secondary text-sm mt-3 py-1 px-2">🔊 อ่านคำถาม</button>
+            </div>
+
+            <button id="speak-answer-input-btn" class="btn btn-success w-full mb-4">🎤 ตอบด้วยเสียง</button>
+            <div id="speech-feedback" class="text-center"></div>
+
+            <button id="reveal-answer-btn" class="btn btn-primary w-full mb-4">💭 เปิดเผยคำตอบ</button>
+
+            <div id="answer-display" class="hidden border p-6 rounded-lg bg-green-50 mb-6">
+                <p class="text-xl font-semibold mb-2">✅ คำตอบที่ถูกต้อง:</p>
+                <p id="correct-answer" class="text-2xl font-bold text-green-800"></p>
+                <button id="speak-answer-btn" class="btn btn-secondary text-sm mt-3 py-1 px-2">🔊 อ่านคำตอบ</button>
+            </div>
+
+            <div id="difficulty-rating" class="hidden text-center">
+                <p class="text-lg font-semibold mb-3">🎯 คุณจำคำตอบได้ดีแค่ไหน?</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+                    <button class="btn btn-danger rating-btn" data-rating="1">1 (จำไม่ได้เลย)</button>
+                    <button class="btn btn-danger rating-btn" data-rating="2">2 (ยากมาก)</button>
+                    <button class="btn btn-secondary rating-btn" data-rating="3">3 (ค่อนข้างยาก)</button>
+                    <button class="btn btn-success rating-btn" data-rating="4">4 (ง่าย)</button>
+                    <button class="btn btn-success rating-btn" data-rating="5">5 (ง่ายมาก)</button>
+                </div>
+                <p id="rating-feedback" class="text-gray-600 mb-4"></p>
+            </div>
+
+            <div id="continue-or-quit" class="hidden text-center space-y-4">
+                <button id="next-question-btn" class="btn btn-primary w-full">➡️ คำถามถัดไป</button>
+                <button id="repeat-session-btn" class="btn btn-info w-full hidden">🔄 ทำซ้ำ</button>
+                <button id="quit-session-btn" class="btn btn-danger w-full">ออกจากเซสชั่น</button>
+            </div>
+
+            <button id="back-from-learning" class="btn btn-secondary w-full mt-6">⬅️ กลับเมนูหลัก</button>
+        </div>
+
+        <div id="manage-questions-screen" class="hidden">
+            <h2 class="text-2xl font-bold mb-4 text-center">📚 จัดการคำถาม</h2>
+
+            <div id="add-question-section" class="mb-6 p-4 border rounded-lg bg-gray-50">
+                <h3 class="text-xl font-semibold mb-3">➕ เพิ่มคำถามใหม่</h3>
+                <label for="new-question-text" class="block font-semibold">คำศัพท์ภาษาอังกฤษ:</label>
+                <input type="text" id="new-question-text" placeholder="e.g., house" class="mb-2">
+                <label for="new-answer-text" class="block font-semibold">คำแปลภาษาไทย:</label>
+                <input type="text" id="new-answer-text" placeholder="e.g., บ้าน" class="mb-2">
+                <button id="add-question-btn" class="btn btn-success w-full">เพิ่มคำถาม</button>
+            </div>
+
+            <div id="edit-delete-question-section" class="mb-6 p-4 border rounded-lg bg-gray-50">
+                <h3 class="text-xl font-semibold mb-3">✏️ แก้ไข / 🗑️ ลบ คำถาม</h3>
+                <label for="edit-delete-question-id" class="block font-semibold">ป้อน ID คำถาม:</label>
+                <input type="text" id="edit-delete-question-id" placeholder="e.g., 1" class="mb-2">
+                <div class="flex space-x-2 mb-4">
+                    <button id="load-question-for-edit-btn" class="btn btn-secondary flex-1">โหลดเพื่อแก้ไข</button>
+                    <button id="delete-question-btn" class="btn btn-danger flex-1">ลบคำถาม</button>
+                </div>
+
+                <div id="edit-form" class="hidden mt-4 p-4 border rounded-lg bg-white">
+                    <h4 class="text-lg font-semibold mb-3">แก้ไขคำถาม ID: <span id="editing-question-id"></span></h4>
+                    <label for="edit-question-text" class="block font-semibold">คำศัพท์ภาษาอังกฤษ:</label>
+                    <input type="text" id="edit-question-text">
+                    <label for="edit-answer-text" class="block font-semibold">คำแปลภาษาไทย:</label>
+                    <input type="text" id="edit-answer-text">
+                    <label class="block mb-2">
+                        <input type="checkbox" id="reset-progress-checkbox" class="mr-2">
+                        รีเซ็ตความคืบหน้าการทบทวนสำหรับคำถามนี้
+                    </label>
+                    <button id="save-edited-question-btn" class="btn btn-primary w-full">บันทึกการแก้ไข</button>
+                </div>
+            </div>
+
+            <div id="view-all-questions-section" class="mb-6 p-4 border rounded-lg bg-gray-50">
+                <h3 class="text-xl font-semibold mb-3">📋 คำถามทั้งหมด</h3>
+                <button id="refresh-question-list-btn" class="btn btn-secondary mb-3">อัปเดตรายการ</button>
+                <!-- Added overflow-x-auto for horizontal scrolling on small screens -->
+                <div class="max-h-96 overflow-y-auto overflow-x-auto border rounded-lg">
+                    <table id="questions-table" class="min-w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>คำถาม</th>
+                                <th>คำตอบ</th>
+                                <th>ทบทวนถัดไป</th>
+                                <th>ช่วงเวลา</th>
+                                <th>ปัจจัยง่าย</th>
+                                <th>ประวัติ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button id="back-from-manage" class="btn btn-secondary w-full mt-6">⬅️ กลับเมนูหลัก</button>
+        </div>
+
+        <div id="stats-screen" class="hidden">
+            <h2 class="text-2xl font-bold mb-4 text-center">📊 สถิติ</h2>
+            <div id="stats-content" class="p-4 border rounded-lg bg-gray-50 space-y-2 text-lg">
+                <p><strong>จำนวนคำถามทั้งหมด:</strong> <span id="total-questions-stat">0</span></p>
+                <p><strong>พร้อมทบทวนวันนี้:</strong> <span id="due-questions-stat">0</span></p>
+                <p><strong>ทบทวนแล้ว (กำหนดการในอนาคต):</strong> <span id="reviewed-questions-stat">0</span></p>
+                <div id="recent-history-stat" class="mt-4">
+                    <h3 class="font-semibold text-xl mb-2">ประวัติการทบทวนล่าสุด:</h3>
+                    <ul id="history-list" class="list-disc pl-5">
+                        </ul>
+                </div>
+            </div>
+            <button id="back-from-stats" class="btn btn-secondary w-full mt-6">⬅️ กลับเมนูหลัก</button>
+        </div>
+
+        <div id="export-import-screen" class="hidden">
+            <h2 class="text-2xl font-bold mb-4 text-center">📁 ส่งออก/นำเข้าข้อมูล</h2>
+
+            <div class="p-4 border rounded-lg bg-gray-50 mb-6">
+                <h3 class="text-xl font-semibold mb-3">ส่งออกข้อมูลปัจจุบัน (CSV)</h3>
+                <p class="mb-2">ดาวน์โหลดข้อมูลคำถามทั้งหมด รวมถึงความคืบหน้าการทบทวนเป็นไฟล์ CSV:</p>
+                <button id="export-csv-btn-manual" class="btn btn-success w-full mt-2">⬇️ ดาวน์โหลดเป็น CSV</button>
+            </div>
+
+            <div class="p-4 border rounded-lg bg-gray-50">
+                <h3 class="text-xl font-semibold mb-3">นำเข้าข้อมูล (CSV)</h3>
+                <p class="mb-2">
+                    เลือกไฟล์ CSV ที่มีคำถามเพื่อนำเข้า (จะแทนที่ข้อมูลปัจจุบัน).
+                    <br>
+                    <strong>รูปแบบที่ต้องการ:</strong> คอลัมน์แรกเป็น ID, คอลัมน์ที่สองเป็นคำถาม, คอลัมน์ที่สามเป็นคำตอบ.
+                    <br>
+                    <strong>วิธีแปลง Excel เป็น CSV:</strong> เปิดไฟล์ Excel ของคุณ, ไปที่ 'File' > 'Save As' หรือ 'Download as' (ใน Google Sheets) แล้วเลือกรูปแบบ 'CSV (Comma delimited) (*.csv)'.
+                </p>
+                <label for="import-csv-file" class="btn btn-primary w-full cursor-pointer">
+                    ⬆️ เลือกไฟล์ CSV เพื่อนำเข้า
+                    <input type="file" id="import-csv-file" accept=".csv" class="hidden">
+                </label>
+                <p class="text-sm text-red-600 mt-2">
+                    ⚠️ การนำเข้าข้อมูลจะ **ลบข้อมูลคำถามปัจจุบันทั้งหมด** และแทนที่ด้วยข้อมูลจากไฟล์ CSV
+                </p>
+            </div>
+
+            <div class="p-4 border rounded-lg bg-gray-50 mt-6">
+                <h3 class="text-xl font-semibold mb-3">รูปแบบข้อมูล JSON (สำหรับสำรองข้อมูลดิบ)</h3>
+                <p class="mb-2">คัดลอกข้อมูล JSON ด้านล่างเพื่อสำรองข้อมูลดิบ (ไม่แนะนำสำหรับการนำเข้าบ่อยๆ):</p>
+                <textarea id="export-data-json" rows="8" readonly class="font-mono text-sm"></textarea>
+                <button id="copy-json-btn" class="btn btn-secondary w-full mt-2">คัดลอก JSON</button>
+                <p class="mb-2 mt-4">วางข้อมูล JSON เพื่อนำเข้า (ไม่แนะนำ):</p>
+                <textarea id="import-data-json" rows="8" placeholder="วางข้อมูล JSON ที่นี่" class="font-mono text-sm"></textarea>
+                <button id="import-json-btn" class="btn btn-danger w-full mt-2">นำเข้า JSON (ใช้ความระมัดระวัง)</button>
+            </div>
+
+
+            <button id="back-from-export-import" class="btn btn-secondary w-full mt-6">⬅️ กลับเมนูหลัก</button>
+        </div>
+
+        <!-- Temporary version indicator for debugging -->
+        <div id="version-indicator" class="text-xs text-gray-400 text-right mt-4">Version: 2.2</div>
+
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <p id="confirm-message" class="text-lg font-semibold mb-4 text-gray-800"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirm-yes-btn" class="btn btn-danger">ยืนยัน</button>
+                <button id="confirm-no-btn" class="btn btn-secondary">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase SDK imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by Canvas environment (if available)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Firebase Configuration (Replace with your actual Firebase project config)
+        const firebaseConfig = {
+          apiKey: "AIzaSyBbB5KX4cu5Bm8ErY2guMpslCQIt4Q8JBc",
+          authDomain: "spaced-repetition-app-22ab6.firebaseapp.com",
+          projectId: "spaced-repetition-app-22ab6",
+          storageBucket: "spaced-repetition-app-22ab6.firebasestorage.app",
+          messagingSenderId: "835061753065",
+          appId: "1:835061753065:web:5e2840c687bbfa040c3c78",
+          measurementId: "G-L1MX5PHLQ1"
+        };
+
+
+        // Initialize Firebase variables
+        let app, db, auth, userId;
+        let isAuthReady = false; // Flag to ensure Firestore operations only happen after auth
+
+        // Utility Functions
+        /**
+         * Shows a specific screen while hiding all other screens.
+         * @param {string} screenId - The ID of the screen to show.
+         */
+        function showScreen(screenId) {
+            document.querySelectorAll('div[id$="-screen"], #main-menu').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+            console.log(`Screen changed to: ${screenId}`);
+
+            // --- NEW IN 1.7: Explicitly reset main menu button texts when showing main menu ---
+            if (screenId === 'main-menu') {
+                document.getElementById('start-learning-btn').innerHTML = '🚀 เริ่มเรียนรู้';
+                // Use data-initial-text for manage-questions-btn
+                document.getElementById('manage-questions-btn').innerHTML = document.getElementById('manage-questions-btn').dataset.initialText || '📚 จัดการคำถาม'; // NEW IN 1.9
+                document.getElementById('view-stats-btn').innerHTML = '📊 ดูสถิติ';
+                document.getElementById('export-import-btn').innerHTML = '📁 ส่งออก/นำเข้าข้อมูล';
+                document.getElementById('exit-app-btn').innerHTML = '👋 ออกจากแอป';
+                // Also ensure they are not disabled
+                document.getElementById('start-learning-btn').disabled = false;
+                document.getElementById('manage-questions-btn').disabled = false;
+                document.getElementById('view-stats-btn').disabled = false;
+                document.getElementById('export-import-btn').disabled = false;
+                document.getElementById('exit-app-btn').disabled = false;
+                console.log("Main menu buttons explicitly reset.");
+            }
+            // --- END NEW IN 1.7 ---
+        }
+
+        /**
+         * Displays a temporary flash message at the top of the screen.
+         * @param {string} message - The message to display.
+         * @param {string} type - The type of message ('info', 'success', 'error').
+         * @param {boolean} [speakMessage=false] - Whether to speak the message aloud.
+         */
+        function displayFlashMessage(message, type = 'info', speakMessage = false) {
+            const container = document.getElementById('flash-message-container');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flash-message flash-${type}`;
+            msgDiv.textContent = message;
+            container.innerHTML = ''; // Clear previous messages
+            container.appendChild(msgDiv);
+            setTimeout(() => {
+                msgDiv.remove(); // Remove message after a few seconds
+            }, 7000); // Message visible for 7 seconds
+
+            if (speakMessage && tutor && tutor.speak) {
+                tutor.speak(message);
+            }
+        }
+
+        /**
+         * Shows a full-screen loading overlay with a spinner and message.
+         * @param {string} message - The message to display on the loading overlay.
+         */
+        function showLoadingOverlay(message = "กำลังโหลดข้อมูล...") {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.querySelector('p').textContent = message;
+                overlay.classList.remove('hidden');
+                console.log(`Loading overlay shown with message: "${message}"`);
+            }
+        }
+
+        /**
+         * Hides the full-screen loading overlay.
+         */
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    console.log("Loading overlay hidden.");
+                }, 500); // Increased delay from 100ms to 500ms
+            }
+        }
+
+        /**
+         * Sets the loading state for a given button, disabling it and adding a spinner.
+         * @param {string} buttonId - The ID of the button.
+         * @param {boolean} isLoading - True to set loading state, false to reset.
+         * @param {string} [originalText=null] - The original text of the button, if different from current.
+         */
+        function setButtonLoading(buttonId, isLoading, originalText = null) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                // Store original text if not already stored, or if it's explicitly provided
+                if (!button.dataset.originalText || originalText) {
+                    button.dataset.originalText = originalText || button.innerHTML;
+                }
+
+                if (isLoading) {
+                    button.disabled = true;
+                    // Ensure the spinner is visible and text changes
+                    button.innerHTML = `<span class="spinner-small mr-2"></span> กำลังโหลด...`;
+                    console.log(`Button ${buttonId} set to loading.`);
+                } else {
+                    button.disabled = false;
+                    // Restore original text, fallback to stored dataset, then to empty string
+                    button.innerHTML = button.dataset.originalText || originalText || '';
+                    console.log(`Button ${buttonId} reset from loading. Text: "${button.innerHTML}"`);
+                }
+            }
+        }
+
+        // Custom Confirmation Modal Logic
+        let resolveConfirmPromise; // Stores the resolve function for the confirmation promise
+
+        /**
+         * Displays a custom confirmation modal and returns a Promise that resolves to true (confirmed) or false (cancelled).
+         * @param {string} message - The message to display in the confirmation modal.
+         * @returns {Promise<boolean>} A promise that resolves to true if confirmed, false if cancelled.
+         */
+        function showCustomConfirm(message) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-confirm-modal');
+                const confirmMessage = document.getElementById('confirm-message');
+                const confirmYesBtn = document.getElementById('confirm-yes-btn');
+                const confirmNoBtn = document.getElementById('confirm-no-btn');
+
+                confirmMessage.textContent = message;
+                modal.classList.remove('hidden'); // Show the modal
+                resolveConfirmPromise = resolve; // Store the resolve function
+
+                // Event handlers for Yes/No buttons
+                const handleYes = () => {
+                    modal.classList.add('hidden'); // Hide the modal
+                    confirmYesBtn.removeEventListener('click', handleYes); // Clean up listeners
+                    confirmNoBtn.removeEventListener('click', handleNo);
+                    resolve(true); // Resolve the promise with true
+                };
+
+                const handleNo = () => {
+                    modal.classList.add('hidden'); // Hide the modal
+                    confirmYesBtn.removeEventListener('click', handleYes); // Clean up listeners
+                    confirmNoBtn.removeEventListener('click', handleNo);
+                    resolve(false); // Resolve the promise with false
+                };
+
+                // Add event listeners
+                confirmYesBtn.addEventListener('click', handleYes);
+                confirmNoBtn.addEventListener('click', handleNo);
+            });
+        }
+
+
+        // --- Core Spaced Repetition Logic ---
+        class Question {
+            /**
+             * Represents a single question in the spaced repetition system.
+             * @param {number} id - Unique ID for the question.
+             * @param {string} question - The question text (e.g., English word).
+             * @param {string} answer - The correct answer text (e.g., Thai translation).
+             * @param {string} [nextReview] - ISO date string for the next review. Defaults to today.
+             * @param {number} [interval] - The current interval in days between reviews. Defaults to 0.
+             * @param {number} [easinessFactor] - The easiness factor for SM-2 algorithm. Defaults to 2.5.
+             * @param {Array<string>} [answerHistory] - Array of strings logging review history.
+             * @param {string} [firestoreDocId] - The Firestore document ID for this question.
+             */
+            constructor(id, question, answer, nextReview, interval, easinessFactor, answerHistory, firestoreDocId = null) {
+                this.id = id;
+                this.question = question;
+                this.answer = answer;
+                // Ensure nextReview is a date string inYYYY-MM-DD format
+                this.nextReview = nextReview ? new Date(nextReview).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                this.interval = interval || 0;
+                this.easinessFactor = easinessFactor || 2.5;
+                this.answerHistory = answerHistory || [];
+                this.firestoreDocId = firestoreDocId; // Store Firestore document ID for updates/deletes
+            }
+
+            /**
+             * Calculates the next review date, interval, and easiness factor based on user difficulty rating (SM-2 algorithm).
+             * @param {number} difficulty - User's rating of difficulty (1-5).
+             */
+            calculateNextReview(difficulty) {
+                let newEf = this.easinessFactor;
+                let newInterval = this.interval;
+
+                if (difficulty < 3) { // If answer was incorrect or very difficult
+                    newInterval = 1; // Reset interval to 1 day
+                    newEf = Math.max(1.3, newEf - 0.8); // Decrease easiness factor
+                } else { // If answer was correct
+                    if (difficulty === 3) { // Hard but correct
+                        newEf = Math.max(1.3, newEf - 0.2);
+                    } else if (difficulty === 4) { // Correct, but with hesitation
+                        // No change to EF
+                    } else if (difficulty === 5) { // Perfect recall
+                        newEf += 0.1;
+                    }
+
+                    newEf = Math.min(newEf, 5.0); // Cap EF at 5.0
+
+                    if (this.interval === 0) { // First successful review
+                        newInterval = 1;
+                    } else if (this.interval === 1) { // Second successful review
+                        newInterval = 6;
+                    } else { // Subsequent successful reviews
+                        newInterval = Math.round(this.interval * newEf);
+                    }
+                }
+
+                if (newInterval < 1) { // Ensure interval is at least 1 day
+                    newInterval = 1;
+                }
+
+                const nextReviewDate = new Date();
+                nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
+
+                this.nextReview = nextReviewDate.toISOString().split('T')[0]; // Format asYYYY-MM-DD
+                this.interval = newInterval;
+                this.easinessFactor = newEf;
+
+                // Log the answer history
+                const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16); //YYYY-MM-DD HH:MM
+                this.answerHistory.push(`${timestamp}:D${difficulty}`);
+            }
+        }
+
+        class SpacedRepetitionTutor {
+            constructor() {
+                this.questions = [];
+                this.currentQuestionIndex = -1; // Index within the session's dueQuestions
+                this.currentQuestion = null; // The actual Question object being reviewed
+                this.dueQuestions = []; // Questions due for review in the current session
+
+                this.synth = null; // SpeechSynthesis object
+                this.voices = []; // Available TTS voices
+                this.preferredVoice = null; // Selected English voice
+
+                this.speechRecognition = null; // SpeechRecognition object
+                this.isListening = false; // Flag for speech recognition active state
+                this.speechFeedbackElement = document.getElementById('speech-feedback'); // Element to show speech feedback
+
+                this.initializeTextToSpeech();
+                this.initializeSpeechRecognition();
+            }
+
+            /**
+             * Initializes the Web Speech API (Text-to-Speech).
+             */
+            initializeTextToSpeech() {
+                if ('speechSynthesis' in window) {
+                    this.synth = window.speechSynthesis;
+
+                    // Event listener for when voices are loaded/changed
+                    this.synth.onvoiceschanged = () => {
+                        this.voices = this.synth.getVoices();
+                        this.setPreferredVoice();
+                        console.log("TTS voices loaded.");
+                    };
+
+                    // If voices are already available, set preferred voice immediately
+                    if (this.synth.getVoices().length > 0) {
+                        this.voices = this.synth.getVoices();
+                        this.setPreferredVoice();
+                        console.log("TTS voices already available.");
+                    }
+                } else {
+                    console.warn("SpeechSynthesis not supported by this browser.");
+                    displayFlashMessage("เบราว์เซอร์ไม่รองรับฟังก์ชันเสียงอ่าน. โปรดลองใช้เบราว์เซอร์ที่รองรับ เช่น Chrome.", "error", false);
+                    // Disable speak buttons if TTS is not supported
+                    const speakQuestionBtn = document.getElementById('speak-question-btn');
+                    const speakAnswerBtn = document.getElementById('speak-answer-btn');
+                    if (speakQuestionBtn) speakQuestionBtn.disabled = true;
+                    if (speakAnswerBtn) speakAnswerBtn.disabled = true;
+                }
+            }
+
+            /**
+             * Sets the preferred Thai or English voice for text-to-speech.
+             */
+            setPreferredVoice() {
+                if (this.voices.length === 0) {
+                    console.warn("No voices available to set preferred voice.");
+                    this.preferredVoice = null;
+                    return;
+                }
+
+                // Try to find a Thai voice first
+                this.preferredVoice = this.voices.find(voice => voice.lang.startsWith('th-TH'));
+
+                // Fallback to a specific US English voice (Google or Zira) if no Thai voice
+                if (!this.preferredVoice) {
+                    this.preferredVoice = this.voices.find(voice =>
+                        voice.lang.startsWith('en-US') && (voice.name.includes('Google US English') || voice.name.includes('Zira'))
+                    );
+                }
+
+                // Fallback to any en-US voice
+                if (!this.preferredVoice) {
+                    this.preferredVoice = this.voices.find(voice => voice.lang.startsWith('en-US'));
+                }
+
+                // Fallback to any English voice
+                if (!this.preferredVoice) {
+                    this.preferredVoice = this.voices.find(voice => voice.lang.startsWith('en'));
+                }
+
+                // Fallback to the first available voice if no suitable voice is found
+                if (!this.preferredVoice && this.voices.length > 0) {
+                    this.preferredVoice = this.voices[0];
+                }
+
+                if (this.preferredVoice) {
+                    console.log(`TTS voice selected: ${this.preferredVoice.name} (${this.preferredVoice.lang})`);
+                } else {
+                    console.warn("No suitable TTS voice found. Speech will use default or might not work.");
+                    displayFlashMessage("ไม่พบเสียงภาษาไทยหรือภาษาอังกฤษบนอุปกรณ์. เสียงอ่านอาจไม่ทำงาน. โปรดตรวจสอบการตั้งค่าภาษาบนมือถือ/เบราว์เซอร์.", "info", false);
+                }
+            }
+
+            /**
+             * Speaks the given text using the preferred voice.
+             * @param {string} text - The text to speak.
+             */
+            speak(text) {
+                if (!this.synth || !this.preferredVoice || !text) {
+                    console.warn("SpeechSynthesis not ready or no text to speak.");
+                    if (!this.synth) {
+                        displayFlashMessage("ฟังก์ชันเสียงอ่านไม่พร้อมใช้งาน.", "error", false);
+                    } else if (!this.preferredVoice) {
+                        displayFlashMessage("ไม่พบเสียงสำหรับอ่าน. โปรดตรวจสอบการตั้งค่าภาษาบนมือถือ/เบราว์เซอร์.", "error", false);
+                    }
+                    return;
+                }
+                if (this.synth.speaking) {
+                    this.synth.cancel(); // Stop any ongoing speech
+                }
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.voice = this.preferredVoice;
+                utterance.pitch = 1.0;
+                utterance.rate = 1.0;
+
+                utterance.onstart = () => console.log('Speech started');
+                utterance.onend = () => console.log('Speech ended');
+                utterance.onerror = (event) => console.error('Speech error:', event.error);
+
+                this.synth.speak(utterance);
+            }
+
+            /**
+             * Initializes the Web Speech API (Speech Recognition).
+             */
+            initializeSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                if (!SpeechRecognition) {
+                    console.warn("Web Speech API (SpeechRecognition) not supported by this browser.");
+                    const speakAnswerBtn = document.getElementById('speak-answer-input-btn');
+                    if (speakAnswerBtn) {
+                        speakAnswerBtn.disabled = true; // Disable speech input button
+                    }
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.textContent = "เบราว์เซอร์ของคุณไม่รองรับการตอบด้วยเสียง (แนะนำ Chrome)";
+                    }
+                    displayFlashMessage("เบราว์เซอร์ของคุณไม่รองรับการตอบด้วยเสียง. โปรดใช้ Chrome หรือตรวจสอบการตั้งค่าไมโครโฟน.", "error", false);
+                    return;
+                }
+
+                this.speechRecognition = new SpeechRecognition();
+                this.speechRecognition.continuous = false; // Listen for a single utterance
+                this.speechRecognition.interimResults = false; // Only return final results
+                this.speechRecognition.lang = 'th-TH'; // Set language to Thai for speech recognition
+                console.log(`Speech recognition language set to: ${this.speechRecognition.lang}`); // Log the language
+
+                this.speechRecognition.onstart = () => {
+                    this.isListening = true;
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.classList.add('recording-indicator'); // Visual indicator
+                        this.speechFeedbackElement.textContent = "กำลังฟัง... พูดคำตอบของคุณ";
+                    }
+                    const speakAnswerBtn = document.getElementById('speak-answer-input-btn');
+                    if (speakAnswerBtn) {
+                        speakAnswerBtn.textContent = "กำลังฟัง...";
+                        speakAnswerBtn.disabled = true; // Disable button while listening
+                    }
+                };
+
+                this.speechRecognition.onresult = (event) => {
+                    const speechResult = event.results[0][0].transcript;
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.classList.remove('recording-indicator');
+                        this.speechFeedbackElement.textContent = `คุณพูด: "${speechResult}"`;
+                    }
+                    console.log(`Speech result: ${speechResult}`);
+                    this.processSpeechAnswer(speechResult); // Process the recognized speech
+                };
+
+                this.speechRecognition.onerror = (event) => {
+                    this.isListening = false;
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.classList.remove('recording-indicator');
+                    }
+                    console.error("Speech recognition error:", event.error);
+                    let errorMessage = "เกิดข้อผิดพลาดในการจดจำเสียง";
+                    if (event.error === 'not-allowed') {
+                        errorMessage = "คุณต้องอนุญาตให้เข้าถึงไมโครโฟน. โปรดตรวจสอบการตั้งค่าเบราว์เซอร์ของคุณ.";
+                    } else if (event.error === 'no-speech') {
+                        errorMessage = "ไม่ได้ยินเสียงใดๆ โปรดลองอีกครั้ง";
+                    } else if (event.error === 'network') {
+                        errorMessage = "ปัญหาเครือข่ายในการเชื่อมต่อบริการจดจำเสียง";
+                    } else if (event.error === 'aborted') {
+                        errorMessage = "การจดจำเสียงถูกยกเลิก (อาจจะกดหยุดเอง)";
+                    }
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.textContent = errorMessage;
+                    }
+                    displayFlashMessage(errorMessage, 'error', true); // Keep speaking for direct user interaction errors
+                    const speakAnswerBtn = document.getElementById('speak-answer-input-btn');
+                    if (speakAnswerBtn) {
+                        speakAnswerBtn.textContent = "ตอบด้วยเสียง";
+                        speakAnswerBtn.disabled = false;
+                    }
+                    // If the error is not 'aborted' (user manually stopped), show answer and rating
+                    if (event.error !== 'aborted') {
+                         this.showAnswerAndRating(false);
+                    }
+                };
+
+                this.speechRecognition.onend = () => {
+                    this.isListening = false;
+                    if (this.speechFeedbackElement) {
+                        this.speechFeedbackElement.classList.remove('recording-indicator');
+                        // Only reset text if it's still the "listening" message
+                        if (this.speechFeedbackElement.textContent === "กำลังฟัง... พูดคำตอบของคุณ") {
+                             this.speechFeedbackElement.textContent = "การจดจำเสียงสิ้นสุดลง";
+                        }
+                    }
+                    const speakAnswerBtn = document.getElementById('speak-answer-input-btn');
+                    if (speakAnswerBtn) {
+                        speakAnswerBtn.textContent = "ตอบด้วยเสียง";
+                        speakAnswerBtn.disabled = false;
+                    }
+                };
+            }
+
+            /**
+             * Starts or stops speech recognition.
+             */
+            startSpeechRecognition() {
+                if (this.speechRecognition) {
+                    if (this.isListening) {
+                        this.speechRecognition.stop(); // Stop if already listening
+                    } else {
+                        // Hide other elements before starting speech recognition
+                        document.getElementById('reveal-answer-btn').classList.add('hidden');
+                        document.getElementById('answer-display').classList.add('hidden');
+                        document.getElementById('difficulty-rating').classList.add('hidden');
+                        document.getElementById('continue-or-quit').classList.add('hidden');
+                        this.speechRecognition.start(); // Start listening
+                    }
+                } else {
+                    displayFlashMessage("การจดจำเสียงไม่พร้อมใช้งาน. โปรดตรวจสอบการตั้งค่าเบราว์เซอร์.", "error", true); // Keep speaking for direct user interaction errors
+                }
+            }
+
+            /**
+             * Processes the spoken answer, compares it to the correct answer, and determines correctness.
+             * @param {string} spokenAnswer - The text recognized from speech.
+             */
+            processSpeechAnswer(spokenAnswer) {
+                if (!this.currentQuestion) return;
+
+                const correctAnswer = this.currentQuestion.answer.toLowerCase().trim();
+                const spoken = spokenAnswer.toLowerCase().trim();
+
+                let isCorrect = false;
+                // Calculate Levenshtein distance for similarity
+                const levenshteinDistance = this.levenshtein(spoken, correctAnswer);
+                const maxLength = Math.max(spoken.length, correctAnswer.length);
+                const similarity = (maxLength - levenshteinDistance) / maxLength;
+
+                if (similarity >= 0.75 || spoken.includes(correctAnswer) || correctAnswer.includes(spoken)) {
+                    isCorrect = true;
+                }
+
+                let rating;
+                if (isCorrect) {
+                    displayFlashMessage("ถูกต้อง!", "success", true); // Speak this message
+                    rating = 5; // Assign highest rating for correct answer
+                } else {
+                    displayFlashMessage(`ไม่ถูกต้อง คุณพูด: "${spokenAnswer}"`, "error", true); // Speak this message
+                    rating = 1; // Assign lowest rating for incorrect answer
+                }
+                if (this.speechFeedbackElement) {
+                    this.speechFeedbackElement.textContent = ""; // Clear speech feedback
+                }
+                this.showAnswerAndRating(isCorrect, rating); // Show answer and rating options
+            }
+
+            /**
+             * Calculates the Levenshtein distance between two strings.
+             * Used to determine similarity between spoken answer and correct answer.
+             * @param {string} a - First string.
+             * @param {string} b - Second string.
+             * @returns {number} The Levenshtein distance.
+             */
+            levenshtein(a, b) {
+                const matrix = [];
+                // Increment along the first column of each row
+                for (let i = 0; i <= b.length; i++) {
+                    matrix[i] = [i];
+                }
+                // Increment along the first row
+                for (let j = 0; j <= a.length; j++) {
+                    matrix[0][j] = j;
+                }
+                // Fill in the rest of the matrix
+                for (let i = 1; i <= b.length; i++) {
+                    for (let j = 1; j <= a.length; j++) {
+                        const cost = (a[j - 1] === b[i - 1]) ? 0 : 1;
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j] + 1, // Deletion
+                            matrix[i][j - 1] + 1, // Insertion
+                            matrix[i - 1][j - 1] + cost // Substitution
+                        );
+                    }
+                }
+                return matrix[b.length][a.length];
+            }
+
+            // --- Firestore Database Operations ---
+
+            /**
+             * Loads questions from Firestore for the current user.
+             */
+            async loadQuestionsFromFirestore() {
+                if (!isAuthReady || !userId) {
+                    console.warn("Auth not ready or userId not available for Firestore operations.");
+                    displayFlashMessage("ยังไม่ได้เชื่อมต่อฐานข้อมูล. โปรดลองใหม่.", "error", false); // Do not speak automatically
+                    return;
+                }
+
+                showLoadingOverlay("กำลังโหลดคำถามจากฐานข้อมูล...");
+                try {
+                    // Define the collection path for user-specific questions
+                    // Path: /artifacts/{appId}/users/{userId}/questions
+                    const questionsColRef = collection(db, `artifacts/${appId}/users/${userId}/questions`);
+                    // Create a query. orderBy is commented out as per instructions to avoid index issues.
+                    const q = query(questionsColRef);
+
+                    const querySnapshot = await getDocs(q);
+                    const loadedQuestions = [];
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        loadedQuestions.push(new Question(
+                            data.id,
+                            data.question,
+                            data.answer,
+                            data.nextReview,
+                            data.interval,
+                            data.easinessFactor,
+                            data.answerHistory,
+                            doc.id // Store Firestore document ID for future updates/deletes
+                        ));
+                    });
+                    this.questions = loadedQuestions;
+                    console.log(`Loaded ${this.questions.length} questions from Firestore.`);
+                    displayFlashMessage(`โหลดข้อมูลสำเร็จ ${this.questions.length} คำถามจากฐานข้อมูลแล้ว!`, "success", false); // Do not speak automatically
+                } catch (e) {
+                    console.error("Error loading questions from Firestore:", e);
+                    displayFlashMessage("ข้อผิดพลาดในการโหลดข้อมูลจากฐานข้อมูล.", "error", false); // Do not speak automatically
+                } finally {
+                    hideLoadingOverlay(); // Hide overlay regardless of success or failure
+                    this.updateStats(); // Update statistics display
+                    this.populateQuestionsTable(); // Populate the management table
+                }
+            }
+
+            /**
+             * Saves or updates a question in Firestore.
+             * @param {Question} questionObj - The Question object to save.
+             */
+            async saveQuestionToFirestore(questionObj) {
+                if (!isAuthReady || !userId) {
+                    console.warn("Auth not ready or userId not available for Firestore operations.");
+                    displayFlashMessage("ยังไม่ได้เชื่อมต่อฐานข้อมูล. โปรดลองใหม่.", "error", false); // Do not speak automatically
+                    return;
+                }
+
+                showLoadingOverlay("กำลังบันทึกข้อมูล...");
+                try {
+                    // Data to be saved to Firestore
+                    const questionData = {
+                        id: questionObj.id,
+                        question: questionObj.question,
+                        answer: questionObj.answer,
+                        nextReview: questionObj.nextReview,
+                        interval: questionObj.interval,
+                        easinessFactor: questionObj.easinessFactor,
+                        answerHistory: questionObj.answerHistory
+                    };
+
+                    const questionsColRef = collection(db, `artifacts/${appId}/users/${userId}/questions`);
+
+                    if (questionObj.firestoreDocId) {
+                        // If firestoreDocId exists, update the existing document
+                        const docRef = doc(db, questionsColRef.path, questionObj.firestoreDocId);
+                        await updateDoc(docRef, questionData);
+                        console.log(`Updated question ${questionObj.id} in Firestore.`);
+                        displayFlashMessage(`บันทึกการแก้ไขคำถาม ID ${questionObj.id} แล้ว.`, "success", true); // Speak this message
+                    } else {
+                        // If no firestoreDocId, add a new document
+                        const docRef = await addDoc(questionsColRef, questionData);
+                        questionObj.firestoreDocId = docRef.id; // Store the newly generated Firestore document ID
+                        console.log(`Added new question ${questionObj.id} to Firestore.`);
+                        displayFlashMessage(`เพิ่มคำถามใหม่ (ID: ${questionObj.id}) แล้ว.`, "success", true); // Speak this message
+                    }
+                } catch (e) {
+                    console.error("Error saving question to Firestore:", e);
+                    displayFlashMessage("ข้อผิดพลาดในการบันทึกข้อมูล.", "error", false); // Do not speak automatically
+                } finally {
+                    hideLoadingOverlay();
+                }
+            }
+
+            /**
+             * Deletes a question from Firestore using its Firestore document ID.
+             * @param {string} firestoreDocId - The Firestore document ID of the question to delete.
+             * @returns {Promise<boolean>} True if deletion was successful, false otherwise.
+             */
+            async deleteQuestionFromFirestore(firestoreDocId) {
+                if (!isAuthReady || !userId) {
+                    console.warn("Auth not ready or userId not available for Firestore operations.");
+                    displayFlashMessage("ยังไม่ได้เชื่อมต่อฐานข้อมูล. โปรดลองใหม่.", "error", false); // Do not speak automatically
+                    return false;
+                }
+
+                showLoadingOverlay("กำลังลบข้อมูล...");
+                try {
+                    const questionsColRef = collection(db, `artifacts/${appId}/users/${userId}/questions`);
+                    const docRef = doc(db, questionsColRef.path, firestoreDocId);
+                    await deleteDoc(docRef);
+                    console.log(`Deleted Firestore document: ${firestoreDocId}`);
+                    displayFlashMessage(`ลบข้อมูลสำเร็จแล้ว.`, "success", true); // Speak this message
+                    return true;
+                } catch (e) {
+                    console.error("Error deleting question from Firestore:", e);
+                    displayFlashMessage("ข้อผิดพลาดในการลบข้อมูล.", "error", false); // Do not speak automatically
+                    return false;
+                } finally {
+                    hideLoadingOverlay();
+                }
+            }
+
+            // --- Question Management Operations (using Firestore) ---
+
+            /**
+             * Adds a new question to the system and saves it to Firestore.
+             * @param {string} question - The question text.
+             * @param {string} answer - The answer text.
+             */
+            async addQuestion(question, answer) {
+                const newId = this.getNextQuestionId();
+                const newQuestion = new Question(newId, question, answer);
+                this.questions.push(newQuestion); // Add to local array first
+                await this.saveQuestionToFirestore(newQuestion); // Then save to Firestore
+                // displayFlashMessage(`เพิ่มคำถามใหม่แล้ว (ID: ${newId}): '${question}'`, "success"); // Handled by saveQuestionToFirestore
+            }
+
+            /**
+             * Updates an existing question and saves changes to Firestore.
+             * @param {number} id - The ID of the question to update.
+             * @param {string} newQuestionText - The new question text.
+             * @param {string} newAnswerText - The new answer text.
+             * @param {boolean} resetProgress - Whether to reset the review progress for this question.
+             * @returns {Promise<boolean>} True if updated, false otherwise.
+             */
+            async updateQuestion(id, newQuestionText, newAnswerText, resetProgress) {
+                const question = this.getQuestionById(id);
+                if (question) {
+                    question.question = newQuestionText;
+                    question.answer = newAnswerText;
+                    if (resetProgress) {
+                        // Reset SM-2 progress
+                        question.nextReview = new Date().toISOString().split('T')[0];
+                        question.interval = 0;
+                        question.easinessFactor = 2.5;
+                        question.answerHistory = [];
+                        displayFlashMessage("รีเซ็ตความคืบหน้าการทบทวนแล้ว", "info", true); // Speak this message
+                    }
+                    await this.saveQuestionToFirestore(question); // Update in Firestore
+                    // displayFlashMessage(`อัปเดตคำถาม ID ${id} แล้ว.`, "success"); // Handled by saveQuestionToFirestore
+                    return true;
+                }
+                displayFlashMessage(`ไม่พบคำถาม ID ${id}`, "error", true); // Speak this message
+                return false;
+            }
+
+            /**
+             * Deletes a question from the system and from Firestore.
+             * @param {number} id - The ID of the question to delete.
+             * @returns {Promise<boolean>} True if deleted, false otherwise.
+             */
+            async deleteQuestion(id) {
+                const questionToDelete = this.getQuestionById(id);
+                if (questionToDelete && questionToDelete.firestoreDocId) {
+                    const success = await this.deleteQuestionFromFirestore(questionToDelete.firestoreDocId);
+                    if (success) {
+                        this.questions = this.questions.filter(q => q.id !== id); // Remove from local array
+                        // displayFlashMessage(`ลบคำถาม ID ${id} แล้ว.`, "success"); // Handled by deleteQuestionFromFirestore
+                        this.updateStats(); // Update stats after deletion
+                        this.populateQuestionsTable(); // Repopulate table
+                        return true;
+                    }
+                }
+                displayFlashMessage(`ไม่พบคำถาม ID ${id} หรือไม่สามารถลบได้.`, "error", true); // Speak this message
+                return false;
+            }
+
+            /**
+             * Gets the next available unique ID for a new question.
+             * @returns {number} The next available question ID.
+             */
+            getNextQuestionId() {
+                if (this.questions.length === 0) {
+                    return 1;
+                }
+                return Math.max(...this.questions.map(q => q.id)) + 1;
+            }
+
+            /**
+             * Retrieves a question object by its ID.
+             * @param {number} id - The ID of the question to retrieve.
+             * @returns {Question|undefined} The question object or undefined if not found.
+             */
+            getQuestionById(id) {
+                return this.questions.find(q => q.id === id);
+            }
+
+            /**
+             * Filters and sorts questions that are due for review today or earlier.
+             * @returns {Array<Question>} An array of questions due for review.
+             */
+            getDueQuestions() {
+                const today = new Date().toISOString().split('T')[0]; // Get today's date asYYYY-MM-DD
+                const due = this.questions.filter(q => q.nextReview <= today); // Filter questions due today or earlier
+                // Sort by next review date, then by interval (to prioritize older/harder questions)
+                due.sort((a, b) => {
+                    if (a.nextReview !== b.nextReview) {
+                        return a.nextReview.localeCompare(b.nextReview);
+                    }
+                    return a.interval - b.interval;
+                });
+                return due;
+            }
+
+            // --- Learning Session Management ---
+            /**
+             * Starts a new learning session.
+             */
+            startLearningSession() {
+                // Set button to loading state immediately
+                setButtonLoading('start-learning-btn', true, '🚀 เริ่มเรียนรู้'); // Pass original text
+
+                if (this.questions.length === 0) {
+                    displayFlashMessage("ยังไม่มีคำถามในระบบ. โปรดเพิ่มคำถามหรือนำเข้าไฟล์ CSV.", "error", true); // Speak this message
+                    setButtonLoading('start-learning-btn', false); // Reset button state
+                    return;
+                }
+                this.dueQuestions = this.getDueQuestions(); // Get questions due for this session
+                if (this.dueQuestions.length === 0) {
+                    displayFlashMessage("ยอดเยี่ยม! ไม่มีคำถามที่ต้องทบทวนวันนี้!", "success", true); // Speak this message
+                    setButtonLoading('start-learning-btn', false); // Reset button state
+                    return;
+                }
+                this.currentQuestionIndexInSession = 0; // Start from the first due question
+                showScreen('learning-session-screen'); // Switch to learning screen
+                this.loadNextQuestion(); // Load the first question
+                setButtonLoading('start-learning-btn', false); // Reset button state
+            }
+
+            /**
+             * Reveals the answer for the current question.
+             */
+            revealAnswer() {
+                document.getElementById('reveal-answer-btn').classList.add('hidden');
+                document.getElementById('speak-answer-input-btn').classList.add('hidden');
+                if (this.speechFeedbackElement) {
+                    this.speechFeedbackElement.textContent = "";
+                }
+                this.showAnswerAndRating(false); // Show answer and rating options
+            }
+
+            /**
+             * Displays the correct answer and the difficulty rating options.
+             * @param {boolean} answeredViaSpeech - True if the answer was provided via speech.
+             * @param {number|null} speechRating - The rating derived from speech recognition, if applicable.
+             */
+            async showAnswerAndRating(answeredViaSpeech = false, speechRating = null) {
+                document.getElementById('answer-display').classList.remove('hidden');
+                document.getElementById('difficulty-rating').classList.remove('hidden');
+                document.getElementById('correct-answer').textContent = this.currentQuestion.answer;
+
+                this.speak(`คำตอบที่ถูกต้องคือ ${this.currentQuestion.answer}`); // Speak Thai
+                // Note: If the answer itself is English, it will be spoken with a Thai accent if only Thai voice is available.
+
+                if (answeredViaSpeech) {
+                    await this.rateQuestion(speechRating); // Automatically rate if answered via speech
+                }
+            }
+
+            /**
+             * Rates the current question based on user input and updates its SM-2 properties.
+             * @param {number} rating - The difficulty rating (1-5).
+             */
+            async rateQuestion(rating) {
+                this.currentQuestion.calculateNextReview(rating); // Update SM-2 properties
+                await this.saveQuestionToFirestore(this.currentQuestion); // Save updated question to Firestore
+                displayFlashMessage(`ให้คะแนน ${rating} แล้ว! กำหนดการทบทวนถัดไป: ${this.currentQuestion.nextReview}`, "info", true); // Speak this message
+                this.updateStats(); // Update statistics
+
+                document.getElementById('rating-feedback').textContent = this.getRatingFeedback(rating);
+                document.getElementById('difficulty-rating').classList.add('hidden'); // Hide rating options
+
+                const nextQuestionBtn = document.getElementById('next-question-btn');
+                const repeatSessionBtn = document.getElementById('repeat-session-btn');
+                const continueOrQuitDiv = document.getElementById('continue-or-quit');
+
+                continueOrQuitDiv.classList.remove('hidden'); // Show continue/quit options
+
+                if (this.currentQuestionIndexInSession + 1 < this.dueQuestions.length) {
+                    // More questions in session
+                    nextQuestionBtn.classList.remove('hidden');
+                    repeatSessionBtn.classList.add('hidden');
+                    document.getElementById('learning-status').textContent = `คำถามที่ ${this.currentQuestionIndexInSession + 1} จาก ${this.dueQuestions.length} ข้อ`;
+                } else {
+                    // End of session
+                    nextQuestionBtn.classList.add('hidden');
+                    repeatSessionBtn.classList.remove('hidden');
+                    document.getElementById('learning-status').textContent = "เซสชั่นสิ้นสุดแล้ว! คุณต้องการทำซ้ำหรือไม่?";
+                    displayFlashMessage("เซสชั่นเสร็จสมบูรณ์! ข้อมูลถูกบันทึกอัตโนมัติแล้ว.", "success", true); // Speak this message
+                }
+            }
+
+            /**
+             * Returns a feedback message based on the difficulty rating.
+             * @param {number} rating - The difficulty rating (1-5).
+             * @returns {string} The feedback message.
+             */
+            getRatingFeedback(rating) {
+                const messages = {
+                    1: "ไม่ต้องห่วง ฝึกฝนบ่อยๆ เดี๋ยวก็ดีขึ้น!",
+                    2: "สู้ๆ นะ จะดีขึ้นเรื่อยๆ!",
+                    3: "พยายามดีมาก คุณกำลังก้าวหน้า!",
+                    4: "ยอดเยี่ยม! จำได้เร็วมาก!",
+                    5: "สุดยอด! จำได้ทันที!"
+                };
+                return messages[rating];
+            }
+
+            /**
+             * Ends the current learning session.
+             * @param {boolean} forceQuit - If true, immediately returns to main menu. If false, shows repeat/quit options.
+             */
+            endLearningSession(forceQuit = false) {
+                const repeatButton = document.getElementById('repeat-session-btn');
+                const nextQuestionBtn = document.getElementById('next-question-btn');
+                const continueOrQuitDiv = document.getElementById('continue-or-quit');
+
+                const questionDisplay = document.getElementById('question-display');
+                const answerDisplay = document.getElementById('answer-display');
+                const difficultyRating = document.getElementById('difficulty-rating');
+                const revealAnswerBtn = document.getElementById('reveal-answer-btn');
+                const speakAnswerInputBtn = document.getElementById('speak-answer-input-btn');
+
+                // Hide all session-related elements
+                if (questionDisplay) questionDisplay.classList.add('hidden');
+                if (answerDisplay) answerDisplay.classList.add('hidden');
+                if (difficultyRating) difficultyRating.classList.add('hidden');
+                if (revealAnswerBtn) revealAnswerBtn.classList.add('hidden');
+                if (speakAnswerInputBtn) speakAnswerInputBtn.classList.add('hidden');
+
+                if (this.speechFeedbackElement) {
+                    this.speechFeedbackElement.textContent = "";
+                }
+
+                if (forceQuit) {
+                    displayFlashMessage("บันทึกความคืบหน้าแล้ว.", "info", true); // Speak this message
+                    showScreen('main-menu'); // Go back to main menu
+                    // Ensure buttons are hidden if we quit prematurely
+                    if (repeatButton) repeatButton.classList.add('hidden');
+                    if (nextQuestionBtn) nextQuestionBtn.classList.add('hidden');
+                    if (continueOrQuitDiv) continueOrQuitDiv.classList.add('hidden');
+                } else {
+                    displayFlashMessage("เซสชั่นการเรียนรู้เสร็จสมบูรณ์! ข้อมูลถูกบันทึกอัตโนมัติแล้ว.", "success", true); // Speak this message
+                    // Stay on learning screen but show end-of-session options
+                    showScreen('learning-session-screen');
+                    if (continueOrQuitDiv) continueOrQuitDiv.classList.remove('hidden');
+                    if (nextQuestionBtn) nextQuestionBtn.classList.add('hidden');
+                    if (repeatButton) repeatButton.classList.remove('hidden');
+
+                    document.getElementById('learning-status').textContent = "เซสชั่นสิ้นสุดแล้ว! คุณต้องการทำซ้ำหรือไม่?";
+                }
+                this.currentQuestionIndexInSession = -1; // Reset session index
+                this.currentQuestion = null; // Clear current question
+                this.updateStats(); // Update stats in main menu
+            }
+
+            /**
+             * Loads the next question in the current learning session.
+             */
+            loadNextQuestion() {
+                if (this.currentQuestionIndexInSession >= this.dueQuestions.length) {
+                    this.endLearningSession(); // End session if no more questions
+                    return;
+                }
+
+                const questionToDisplay = this.dueQuestions[this.currentQuestionIndexInSession];
+                this.currentQuestion = this.getQuestionById(questionToDisplay.id); // Get full question object
+
+                // Update UI with new question
+                document.getElementById('question-id').textContent = this.currentQuestion.id;
+                document.getElementById('current-question').textContent = this.currentQuestion.question;
+
+                // Reset UI elements for the new question
+                document.getElementById('answer-display').classList.add('hidden');
+                document.getElementById('difficulty-rating').classList.add('hidden');
+                document.getElementById('continue-or-quit').classList.add('hidden');
+                document.getElementById('reveal-answer-btn').classList.remove('hidden');
+                document.getElementById('speak-answer-input-btn').classList.remove('hidden');
+                if (this.speechFeedbackElement) {
+                    this.speechFeedbackElement.textContent = "";
+                }
+                const speakAnswerBtn = document.getElementById('speak-answer-input-btn');
+                if (speakAnswerBtn) {
+                    speakAnswerBtn.disabled = !this.speechRecognition; // Disable if speech recognition not available
+                }
+
+                document.getElementById('learning-status').textContent =
+                    `คำถามที่ ${this.currentQuestionIndexInSession + 1} จาก ${this.dueQuestions.length} ข้อ`;
+
+                this.speak(`คำถามที่ ${this.currentQuestion.id}: ${this.currentQuestion.question}`); // Speak Thai
+            }
+
+
+            // --- Statistics Display ---
+            /**
+             * Updates the statistics displayed on the stats screen.
+             */
+            updateStats() {
+                const totalQuestions = this.questions.length;
+                const dueQuestions = this.getDueQuestions().length;
+                const reviewedQuestions = totalQuestions - dueQuestions; // Simple calculation
+
+                // Get elements
+                const totalStat = document.getElementById('total-questions-stat');
+                const dueStat = document.getElementById('due-questions-stat');
+                const reviewedStat = document.getElementById('reviewed-questions-stat');
+                const historyList = document.getElementById('history-list');
+
+                // Update text content
+                if (totalStat) totalStat.textContent = totalQuestions;
+                if (dueStat) dueStat.textContent = dueQuestions;
+                if (reviewedStat) reviewedStat.textContent = reviewedQuestions;
+
+                // Populate history list
+                if (historyList) {
+                    historyList.innerHTML = ''; // Clear previous entries
+                    if (totalQuestions === 0) {
+                        historyList.innerHTML = '<li class="text-gray-500">ไม่มีคำถามในระบบ</li>';
+                        return;
+                    }
+
+                    this.questions.forEach(q => {
+                        const listItem = document.createElement('li');
+                        let historyText = `ID ${q.id}: '${q.question}' - EF: ${q.easinessFactor.toFixed(2)}`;
+                        if (q.answerHistory && q.answerHistory.length > 0) {
+                            const lastFive = q.answerHistory.slice(-5); // Show last 5 history entries
+                            historyText += `, ประวัติ: ${lastFive.join(' | ')}`;
+                        } else {
+                            historyText += `, ยังไม่มีประวัติการทบทวน`;
+                        }
+                        listItem.textContent = historyText;
+                        historyList.appendChild(listItem);
+                    });
+                }
+            }
+
+            // --- Manage Questions Display ---
+            /**
+             * Populates the questions table on the manage questions screen.
+             */
+            populateQuestionsTable() {
+                const tableBody = document.querySelector('#questions-table tbody');
+                if (!tableBody) return;
+
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                if (this.questions.length === 0) {
+                    const row = tableBody.insertRow();
+                    const cell = row.insertCell();
+                    cell.colSpan = 7; // Span across all columns
+                    cell.textContent = 'ยังไม่มีคำถามในรายการ';
+                    cell.classList.add('text-center', 'py-4', 'text-gray-500');
+                    return;
+                }
+
+                // Sort questions by ID for consistent display
+                const sortedQuestions = [...this.questions].sort((a, b) => a.id - b.id);
+
+                sortedQuestions.forEach(q => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = q.id;
+                    row.insertCell().textContent = q.question;
+                    row.insertCell().textContent = q.answer;
+                    row.insertCell().textContent = q.nextReview;
+                    row.insertCell().textContent = q.interval;
+                    row.insertCell().textContent = q.easinessFactor.toFixed(2); // Format EF
+                    row.insertCell().textContent = q.answerHistory.slice(-3).join(' | '); // Show last 3 history entries
+                });
+            }
+
+            // --- Export Data ---
+            /**
+             * Exports all questions data as a JSON string and displays it in a textarea.
+             */
+            exportDataJson() {
+                const data = JSON.stringify(this.questions, null, 2); // Pretty print JSON
+                const exportTextArea = document.getElementById('export-data-json');
+                if (exportTextArea) {
+                    exportTextArea.value = data;
+                }
+                displayFlashMessage("ข้อมูลถูกส่งออกในรูปแบบ JSON แล้ว", "info", false); // Do not speak automatically
+            }
+
+            /**
+             * Exports all questions data as a CSV file.
+             */
+            exportAsCsv() {
+                if (this.questions.length === 0) {
+                    displayFlashMessage("ไม่มีข้อมูลให้ส่งออก", "error", true); // Speak this message
+                    return;
+                }
+                const headers = ["id", "question", "answer", "nextReview", "interval", "easinessFactor", "answerHistory"];
+                const csvRows = [headers.join(',')]; // CSV header row
+
+                this.questions.forEach(q => {
+                    const row = headers.map(header => {
+                        let value = q[header];
+                        if (header === "answerHistory") {
+                            // Stringify array for CSV, handle quotes within string
+                            value = JSON.stringify(value);
+                        }
+                        // Enclose values with commas, newlines, or double quotes in double quotes
+                        if (typeof value === 'string' && (value.includes(',') || value.includes('\n') || value.includes('"'))) {
+                            return `"${value.replace(/"/g, '""')}"`; // Escape double quotes
+                        }
+                        return value;
+                    }).join(',');
+                    csvRows.push(row);
+                });
+
+                const csvContent = "data:text/csv;charset=utf-8," + csvRows.join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "spaced_repetition_data_" + new Date().toISOString().split('T')[0] + ".csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                displayFlashMessage("ข้อมูลถูกส่งออกเป็น CSV แล้ว", "success", true); // Speak this message
+            }
+
+            // --- Import Data (CSV) ---
+            /**
+             * Imports questions data from a selected CSV file.
+             * This will clear all existing questions and replace them with the imported data.
+             * @param {File} file - The CSV file to import.
+             */
+            importCsvData(file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => { // Made async to await Firestore operations
+                    const csvText = e.target.result;
+                    try {
+                        const parsedQuestions = this.parseCsv(csvText);
+                        // Clear existing data in Firestore before importing new
+                        await this.clearAllQuestionsInFirestore();
+
+                        // Add new questions to Firestore one by one
+                        for (const q of parsedQuestions) {
+                            // Reset firestoreDocId for new import as they will be new documents
+                            q.firestoreDocId = null;
+                            await this.saveQuestionToFirestore(q);
+                        }
+                        // After all imports, reload from Firestore to ensure consistency
+                        await this.loadQuestionsFromFirestore();
+
+                        displayFlashMessage(`นำเข้าข้อมูลสำเร็จ ${parsedQuestions.length} คำถามจาก CSV แล้ว!`, "success", true); // Speak this message
+                    } catch (e) {
+                        console.error("Error importing CSV data:", e);
+                        displayFlashMessage(`ข้อผิดพลาดในการนำเข้า CSV: ${e.message}. ตรวจสอบรูปแบบไฟล์.`, "error", true); // Speak this message
+                    }
+                };
+                reader.onerror = (e) => {
+                    displayFlashMessage("ไม่สามารถอ่านไฟล์ CSV ได้.", "error", true); // Speak this message
+                    console.error("Error reading CSV file:", e);
+                };
+                reader.readAsText(file);
+            }
+
+            /**
+             * Clears all questions belonging to the current user in Firestore.
+             */
+            async clearAllQuestionsInFirestore() {
+                if (!isAuthReady || !userId) {
+                    console.warn("Auth not ready or userId not available for Firestore operations.");
+                    return;
+                }
+                showLoadingOverlay("กำลังลบข้อมูลเดิมในฐานข้อมูล...");
+                try {
+                    const questionsColRef = collection(db, `artifacts/${appId}/users/${userId}/questions`);
+                    const querySnapshot = await getDocs(questionsColRef);
+                    const batch = db.batch(); // Use Firestore batch for efficient multiple deletes
+                    querySnapshot.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit(); // Commit the batch deletion
+                    console.log("Cleared all existing questions in Firestore.");
+                } catch (e) {
+                    console.error("Error clearing Firestore data:", e);
+                    displayFlashMessage("ข้อผิดพลาดในการลบข้อมูลเดิมในฐานข้อมูล.", "error", false); // Do not speak automatically
+                } finally {
+                    hideLoadingOverlay();
+                }
+            }
+
+
+            /**
+             * Parses CSV text into an array of Question objects.
+             * @param {string} csvText - The CSV data as a string.
+             * @returns {Array<Question>} An array of parsed Question objects.
+             * @throws {Error} If CSV format is invalid.
+             */
+            parseCsv(csvText) {
+                const lines = csvText.trim().split('\n');
+                if (lines.length === 0) {
+                    throw new Error("ไฟล์ CSV ว่างเปล่า");
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim());
+                // Validate required headers
+                if (!headers.includes("id") || !headers.includes("question") || !headers.includes("answer")) {
+                    throw new Error("ไฟล์ CSV ต้องมีคอลัมน์ 'id', 'question', 'answer'");
+                }
+
+                const questions = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.trim() === '') continue; // Skip empty lines
+
+                    const values = this.csvLineToArray(line); // Custom CSV line parser
+
+                    if (values.length !== headers.length) {
+                        console.warn(`Skipping malformed row ${i + 1}: "${line}" - Expected ${headers.length} columns, got ${values.length}`);
+                        continue; // Skip malformed rows
+                    }
+
+                    const qData = {};
+                    headers.forEach((header, index) => {
+                        let value = values[index];
+                        // Remove surrounding quotes and unescape internal quotes
+                        if (value.startsWith('"') && value.endsWith('"')) {
+                            value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                        }
+                        qData[header] = value;
+                    });
+
+                    const id = parseInt(qData.id);
+                    if (isNaN(id)) {
+                        console.warn(`Skipping row with invalid ID: ${qData.id}`);
+                        continue;
+                    }
+                    // Parse optional fields, providing defaults
+                    const interval = parseInt(qData.interval || 0);
+                    const easinessFactor = parseFloat(qData.easinessFactor || 2.5);
+                    let answerHistory = [];
+                    try {
+                        if (qData.answerHistory) {
+                            answerHistory = JSON.parse(qData.answerHistory);
+                            if (!Array.isArray(answerHistory)) {
+                                answerHistory = []; // Ensure it's an array
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`Could not parse answerHistory for ID ${id}: ${qData.answerHistory}`, e);
+                        answerHistory = []; // Reset if parsing fails
+                    }
+
+                    questions.push(new Question(
+                        id,
+                        qData.question,
+                        qData.answer,
+                        qData.nextReview,
+                        interval,
+                        easinessFactor,
+                        answerHistory
+                    ));
+                }
+                return questions;
+            }
+
+            /**
+             * Parses a single CSV line, handling quoted fields.
+             * @param {string} text - The CSV line string.
+             * @returns {Array<string>} An array of parsed values.
+             */
+            csvLineToArray(text) {
+                const result = [];
+                let inQuote = false;
+                let current = '';
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    if (char === '"') {
+                        // Handle escaped quotes (e.g., "abc""def")
+                        if (inQuote && text[i + 1] === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuote = !inQuote; // Toggle quote state
+                        }
+                    } else if (char === ',' && !inQuote) {
+                        result.push(current.trim()); // Add current value and reset
+                        current = '';
+                    } else {
+                        current += char; // Append character to current value
+                    }
+                }
+                result.push(current.trim()); // Add the last value
+                return result;
+            }
+
+            /**
+             * Imports questions data from a JSON string.
+             * This will clear all existing questions and replace them with the imported data.
+             * @param {string} jsonData - The JSON data as a string.
+             */
+            importJsonData(jsonData) {
+                try {
+                    const importedQuestionsData = JSON.parse(jsonData);
+                    if (!Array.isArray(importedQuestionsData)) {
+                        throw new Error("Invalid JSON format. Expected an array of questions.");
+                    }
+                    const newQuestions = importedQuestionsData.map(qData => {
+                        // Basic validation for essential properties
+                        if (typeof qData.id !== 'number' || typeof qData.question !== 'string' || typeof qData.answer !== 'string') {
+                            throw new Error(`Invalid question data found: ${JSON.stringify(qData)}. Missing essential properties.`);
+                        }
+                        return new Question(
+                            qData.id,
+                            qData.question,
+                            qData.answer,
+                            qData.nextReview,
+                            qData.interval,
+                            qData.easinessFactor,
+                            qData.answerHistory
+                        );
+                    });
+
+                    // Clear existing data in Firestore before importing new
+                    this.clearAllQuestionsInFirestore().then(async () => {
+                        for (const q of newQuestions) {
+                            q.firestoreDocId = null; // Reset Firestore ID for new import
+                            await this.saveQuestionToFirestore(q);
+                        }
+                        await this.loadQuestionsFromFirestore(); // Reload after all imports
+                        displayFlashMessage(`นำเข้าข้อมูลสำเร็จ ${newQuestions.length} คำถามจาก JSON แล้ว!`, "success", true); // Speak this message
+                    });
+
+                } catch (e) {
+                    console.error("Error importing JSON data:", e);
+                    displayFlashMessage(`ข้อผิดพลาดในการนำเข้าข้อมูล JSON: ${e.message}`, "error", true); // Speak this message
+                }
+            }
+        }
+
+        // Initialize the tutor instance globally
+        let tutor;
+
+        // --- Main Application Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Log the script version for debugging purposes
+            console.log("Script Version: 2.2 - Thai Speech & Mobile Enhancements"); // NEW IN 2.2
+            const versionIndicator = document.getElementById('version-indicator');
+            if (versionIndicator) {
+                versionIndicator.classList.remove('hidden'); // Make the version visible for debugging
+            }
+
+            // NEW IN 1.9: Log initial state of manage-questions-btn
+            const manageQuestionsBtn = document.getElementById('manage-questions-btn');
+            if (manageQuestionsBtn) {
+                console.log(`Initial manage-questions-btn innerHTML: "${manageQuestionsBtn.innerHTML}"`);
+                console.log(`Initial manage-questions-btn data-button-version: "${manageQuestionsBtn.dataset.buttonVersion}"`);
+            }
+
+
+            showLoadingOverlay("กำลังเชื่อมต่อฐานข้อมูล...");
+            try {
+                // Initialize Firebase app with your provided config
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                let signedInSuccessfully = false;
+
+                // Attempt custom token sign-in first (for Canvas environment), then fall back to anonymous
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("Signed in with custom token (Canvas environment).");
+                        signedInSuccessfully = true;
+                    } catch (customTokenError) {
+                        console.warn("Custom token sign-in failed, attempting anonymous sign-in:", customTokenError);
+                        // Fallback to anonymous sign-in if custom token fails
+                        try {
+                            await signInAnonymously(auth);
+                            console.log("Signed in anonymously (Fallback from custom token error).");
+                            signedInSuccessfully = true;
+                        } catch (anonymousError) {
+                            console.error("Anonymous sign-in also failed:", anonymousError);
+                            displayFlashMessage(`ข้อผิดพลาดในการเชื่อมต่อ: ${anonymousError.message}`, "error", false); // Do not speak automatically
+                        }
+                    }
+                } else {
+                    // If no custom token is provided, proceed directly with anonymous sign-in
+                    try {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously (No custom token provided).");
+                        signedInSuccessfully = true;
+                    } catch (anonymousError) {
+                        console.error("Anonymous sign-in failed:", anonymousError);
+                        displayFlashMessage(`ข้อผิดพลาดในการเชื่อมต่อ: ${anonymousError.message}`, "error", false); // Do not speak automatically
+                    }
+                }
+
+                if (signedInSuccessfully) {
+                    // Listen for authentication state changes to ensure user is ready
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid; // Set the global userId
+                            isAuthReady = true; // Mark auth as ready
+                            document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
+                            console.log("Firebase Auth ready. User ID:", userId);
+
+                            tutor = new SpacedRepetitionTutor(); // Initialize the tutor
+                            await tutor.loadQuestionsFromFirestore(); // Load questions from Firestore
+
+                            // Add default questions only if no questions exist for this user
+                            if (tutor.questions.length === 0) {
+                                displayFlashMessage("ไม่พบคำถาม. กำลังเพิ่มคำถามเริ่มต้น...", "info", false); // Do not speak automatically
+                                await tutor.addQuestion("Hello", "สวัสดี");
+                                await tutor.addQuestion("Goodbye", "ลาก่อน");
+                                await tutor.addQuestion("Thank you", "ขอบคุณ");
+                                console.log("Default questions added.");
+                            }
+
+                            tutor.updateStats(); // Update stats display
+                            hideLoadingOverlay(); // Hide the loading overlay
+
+                            setTimeout(() => {
+                                showScreen('main-menu');
+                                console.log("Main menu should be visible now.");
+                                console.log("State of manage-questions-btn after showing main menu:", document.getElementById('manage-questions-btn').innerHTML);
+                                console.log("State of loading-overlay after showing main menu:", document.getElementById('loading-overlay').classList.contains('hidden') ? 'hidden' : 'visible');
+                            }, 600); // Slightly longer than hideLoadingOverlay delay
+
+                        } else {
+                            console.log("No user signed in after auth state change.");
+                            displayFlashMessage("ไม่สามารถเชื่อมต่อฐานข้อมูลได้. โปรดลองโหลดหน้าใหม่.", "error", false); // Do not speak automatically
+                            hideLoadingOverlay();
+                        }
+                    });
+                } else {
+                    // If neither sign-in method worked, hide loading overlay and keep error message
+                    hideLoadingOverlay();
+                }
+
+            } catch (e) {
+                console.error("Failed to initialize Firebase or sign in (outer catch):", e);
+                displayFlashMessage(`ข้อผิดพลาดในการเชื่อมต่อ: ${e.message}`, "error", false); // Do not speak automatically
+                hideLoadingOverlay();
+            }
+
+            // --- Event Listeners for UI Interactions ---
+            document.getElementById('start-learning-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    setButtonLoading('start-learning-btn', true, '🚀 เริ่มเรียนรู้');
+                    tutor.startLearningSession();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('manage-questions-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    showScreen('manage-questions-screen');
+                    tutor.populateQuestionsTable();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('view-stats-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    showScreen('stats-screen');
+                    tutor.updateStats();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('export-import-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    showScreen('export-import-screen');
+                    tutor.exportDataJson(); // Populate JSON export textarea
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('exit-app-btn')?.addEventListener('click', () => {
+                displayFlashMessage('ออกจากแอปพลิเคชันแล้ว. ข้อมูลถูกบันทึกอัตโนมัติ.', 'info', true); // Speak this message
+                showScreen('main-menu');
+            });
+
+            document.getElementById('speak-question-btn')?.addEventListener('click', () => {
+                if (tutor && tutor.currentQuestion) {
+                    // Speak the question in English
+                    tutor.speak(tutor.currentQuestion.question);
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('speak-answer-input-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.startSpeechRecognition();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('reveal-answer-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.revealAnswer();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('speak-answer-btn')?.addEventListener('click', () => {
+                if (tutor && tutor.currentQuestion) {
+                    // Speak the answer in Thai
+                    tutor.speak(tutor.currentQuestion.answer);
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.querySelectorAll('.rating-btn').forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    if (tutor) {
+                        const rating = parseInt(event.target.dataset.rating);
+                        await tutor.rateQuestion(rating);
+                    } else {
+                        displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                    }
+                });
+            });
+
+            document.getElementById('next-question-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.currentQuestionIndexInSession++;
+                    tutor.loadNextQuestion();
+                    document.getElementById('repeat-session-btn')?.classList.add('hidden');
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('repeat-session-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.startLearningSession();
+                    displayFlashMessage("กำลังเริ่มเซสชั่นทำซ้ำ...", "info", true); // Speak this message
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('quit-session-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.endLearningSession(true);
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('back-from-learning')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.endLearningSession(true);
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('add-question-btn')?.addEventListener('click', async () => {
+                if (tutor) {
+                    const newQuestionTextElement = document.getElementById('new-question-text');
+                    const newAnswerTextElement = document.getElementById('new-answer-text');
+
+                    const questionText = newQuestionTextElement?.value.trim();
+                    const answerText = newAnswerTextElement?.value.trim();
+
+                    if (questionText && answerText) {
+                        await tutor.addQuestion(questionText, answerText);
+                        if (newQuestionTextElement) newQuestionTextElement.value = '';
+                        if (newAnswerTextElement) newAnswerTextElement.value = '';
+                        tutor.populateQuestionsTable(); // Refresh table after adding
+                    } else {
+                        displayFlashMessage("โปรดป้อนทั้งคำถามและคำตอบ", "error", true); // Speak this message
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('load-question-for-edit-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    const editDeleteQuestionIdElement = document.getElementById('edit-delete-question-id');
+                    const id = parseInt(editDeleteQuestionIdElement?.value);
+                    if (isNaN(id)) {
+                        displayFlashMessage("โปรดป้อน ID ที่ถูกต้อง", "error", true); // Speak this message
+                        return;
+                    }
+                    const question = tutor.getQuestionById(id);
+                    const editForm = document.getElementById('edit-form');
+                    if (question) {
+                        document.getElementById('editing-question-id').textContent = question.id;
+                        document.getElementById('edit-question-text').value = question.question;
+                        document.getElementById('edit-answer-text').value = question.answer;
+                        document.getElementById('reset-progress-checkbox').checked = false; // Uncheck by default
+                        if (editForm) editForm.classList.remove('hidden');
+                    } else {
+                        displayFlashMessage(`ไม่พบคำถาม ID ${id}`, "error", true); // Speak this message
+                        if (editForm) editForm.classList.add('hidden');
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('save-edited-question-btn')?.addEventListener('click', async () => {
+                if (tutor) {
+                    const editingQuestionIdElement = document.getElementById('editing-question-id');
+                    const editQuestionTextElement = document.getElementById('edit-question-text');
+                    const editAnswerTextElement = document.getElementById('edit-answer-text');
+                    const resetProgressCheckbox = document.getElementById('reset-progress-checkbox');
+
+                    const id = parseInt(editingQuestionIdElement?.textContent);
+                    const newQuestionText = editQuestionTextElement?.value.trim();
+                    const newAnswerText = editAnswerTextElement?.value.trim();
+                    const resetProgress = resetProgressCheckbox?.checked;
+
+                    if (newQuestionText && newAnswerText && !isNaN(id)) {
+                        if (await tutor.updateQuestion(id, newQuestionText, newAnswerText, resetProgress)) {
+                            document.getElementById('edit-form')?.classList.add('hidden');
+                            document.getElementById('edit-delete-question-id').value = ''; // Clear input
+                            tutor.populateQuestionsTable(); // Refresh table
+                        }
+                    } else {
+                        displayFlashMessage("โปรดป้อนทั้งคำถามและคำตอบสำหรับการแก้ไข", "error", true); // Speak this message
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('delete-question-btn')?.addEventListener('click', async () => {
+                if (tutor) {
+                    const editDeleteQuestionIdElement = document.getElementById('edit-delete-question-id');
+                    const id = parseInt(editDeleteQuestionIdElement?.value);
+                    if (isNaN(id)) {
+                        displayFlashMessage("โปรดป้อน ID ที่ถูกต้อง", "error", true); // Speak this message
+                        return;
+                    }
+                    // Use custom confirm modal instead of browser's confirm()
+                    if (await showCustomConfirm(`คุณแน่ใจหรือไม่ที่ต้องการลบคำถาม ID ${id} นี้?`)) {
+                        await tutor.deleteQuestion(id);
+                        document.getElementById('edit-delete-question-id').value = ''; // Clear input after deletion
+                        document.getElementById('edit-form')?.classList.add('hidden'); // Hide edit form
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('refresh-question-list-btn')?.addEventListener('click', async () => {
+                if (tutor) {
+                    await tutor.loadQuestionsFromFirestore(); // Reload data from Firestore
+                    displayFlashMessage('รายการคำถามถูกอัปเดตแล้ว', 'info', true); // Speak this message
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('back-from-manage')?.addEventListener('click', () => {
+                showScreen('main-menu');
+                if (tutor) tutor.updateStats();
+            });
+
+            document.getElementById('back-from-stats')?.addEventListener('click', () => {
+                showScreen('main-menu');
+                if (tutor) tutor.updateStats();
+            });
+
+            document.getElementById('export-csv-btn-manual')?.addEventListener('click', () => {
+                if (tutor) {
+                    tutor.exportAsCsv();
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('import-csv-file')?.addEventListener('change', async (event) => {
+                if (tutor) {
+                    if (event.target.files.length > 0) {
+                        // Use custom confirm modal instead of browser's confirm()
+                        if (await showCustomConfirm('คำเตือน: การนำเข้าข้อมูลจะลบข้อมูลคำถามปัจจุบันทั้งหมดและแทนที่ด้วยข้อมูลจากไฟล์ CSV ที่เลือก. คุณแน่ใจหรือไม่?')) {
+                            await tutor.importCsvData(event.target.files[0]);
+                        } else {
+                            event.target.value = ''; // Clear the file input if cancelled
+                        }
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('copy-json-btn')?.addEventListener('click', () => {
+                if (tutor) {
+                    const exportTextArea = document.getElementById('export-data-json');
+                    if (exportTextArea) {
+                        exportTextArea.select();
+                        exportTextArea.setSelectionRange(0, 99999); // Select all text
+                        try {
+                            document.execCommand('copy'); // Copy to clipboard
+                            displayFlashMessage('คัดลอกข้อมูล JSON แล้ว!', 'success', true); // Speak this message
+                        } catch (err) {
+                            displayFlashMessage('ไม่สามารถคัดลอกได้. กรุณาคัดลอกด้วยตนเอง.', 'error', true); // Speak this message
+                            console.error('Failed to copy text: ', err);
+                        }
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('import-json-btn')?.addEventListener('click', async () => {
+                if (tutor) {
+                    const importDataTextArea = document.getElementById('import-data-json');
+                    const importData = importDataTextArea?.value;
+                    if (!importData || importData.trim() === '') {
+                        displayFlashMessage('โปรดวางข้อมูล JSON ที่จะนำเข้า', "error", true); // Speak this message
+                        return;
+                    }
+                    // Use custom confirm modal instead of browser's confirm()
+                    if (await showCustomConfirm('คำเตือน: การนำเข้าข้อมูล JSON จะเขียนทับข้อมูลที่มีอยู่ทั้งหมด. คุณแน่ใจหรือไม่?')) {
+                        await tutor.importJsonData(importData);
+                        if (importDataTextArea) importDataTextArea.value = ''; // Clear input after import
+                    }
+                } else {
+                    displayFlashMessage("แอปยังโหลดไม่สมบูรณ์. กรุณารอสักครู่.", "error", true); // Speak this message
+                }
+            });
+
+            document.getElementById('back-from-export-import')?.addEventListener('click', () => {
+                showScreen('main-menu');
+                if (tutor) tutor.updateStats();
+            });
+        });
+    </script>
+</body>
+</html>
